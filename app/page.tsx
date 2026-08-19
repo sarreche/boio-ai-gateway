@@ -1,4 +1,4 @@
-const origin = "https://my-gateway.vercel.app";
+const origin = "https://boio-ai-gateway.vercel.app";
 
 export default function Home() {
   return (
