@@ -1,0 +1,13 @@
+:root { color-scheme: dark; --bg: #0b0d10; --panel: #14181d; --line: #2a3038; --text: #f3f5f7; --muted: #a6b0bb; --accent: #82e6b0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at top, #18221f 0, var(--bg) 35rem); color: var(--text); font-family: ui-sans-serif, system-ui, sans-serif; line-height: 1.6; }
+main { width: min(920px, calc(100% - 2rem)); margin: 0 auto; padding: 5rem 0; }
+header { padding-bottom: 2.5rem; border-bottom: 1px solid var(--line); }
+.eyebrow { color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .16em; }
+h1 { margin: .35rem 0; font-size: clamp(3rem, 8vw, 5.5rem); line-height: 1; letter-spacing: -.055em; }
+h2 { margin: 0 0 .5rem; font-size: 1.35rem; }
+p { color: var(--muted); max-width: 70ch; }
+section { padding: 2rem 0; border-bottom: 1px solid var(--line); }
+code { font-family: "SFMono-Regular", Consolas, monospace; }
+p code { color: var(--accent); }
+pre { overflow-x: auto; padding: 1.2rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: #d9e1e8; font-size: .9rem; }
