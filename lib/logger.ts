@@ -1,6 +1,6 @@
 export interface LogEvent {
   requestId: string;
-  endpoint: "chat" | "embeddings";
+  endpoint: "chat" | "embeddings" | "evaluations";
   provider: string;
   durationMs: number;
   status: "success" | "error";

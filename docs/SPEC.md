@@ -18,10 +18,11 @@ El gateway debe ocultar completamente a las aplicaciones consumidoras:
 
 Las aplicaciones deben consumir únicamente nuestro gateway mediante una interfaz estable.
 
-El sistema tendrá inicialmente dos capacidades:
+El sistema tendrá tres capacidades:
 
 1. generación de texto/chat;
 2. generación de embeddings.
+3. evaluaciones tipadas para decisiones acotadas.
 
 La API externa debe seguir, en la medida de lo razonable, el formato de la API de OpenAI/OpenRouter para facilitar su integración con SDKs y herramientas existentes.
 
@@ -141,9 +142,18 @@ Implementar inicialmente únicamente:
 GET  /health
 POST /v1/chat/completions
 POST /v1/embeddings
+POST /v1/evaluations
 ```
 
 No agregar otros endpoints salvo que sean estrictamente necesarios.
+
+## Evaluaciones tipadas
+
+`POST /v1/evaluations` requiere Bearer API key y evalúa un `state` compartido contra una o más preguntas independientes. `state` acepta texto, objetos JSON o arrays JSON no vacíos. Las preguntas admiten las primitivas `boolean`, `choice` y `score`, que pueden combinarse en una misma solicitud.
+
+El campo público `model` es opcional y sólo acepta `gateway` o `default`. Nunca selecciona ni revela el modelo real. La respuesta contiene `model: "gateway"`, `answers` y, cuando esté disponible, uso normalizado. No debe exponer el nombre real del modelo, IDs de generación, costos ni metadatos de routing del proveedor.
+
+La capacidad se configura en `config/models.json` bajo `evaluations`. Inicialmente utiliza Vercel AI Gateway mediante `VERCEL_GATEWAY_API_KEY` y el modelo se define únicamente en configuración. Los tests deben cubrir las tres primitivas, preguntas mixtas, autenticación, validación y sanitización de metadatos internos.
 
 ---
 

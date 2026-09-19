@@ -3,9 +3,10 @@ import { isAuthorized } from "@/lib/auth";
 import { ApiError, errorResponse, providerFailureToApiError } from "@/lib/errors";
 import { ProviderFailure } from "@/lib/providers/types";
 import { readJsonBody } from "@/lib/request";
-import { routeChat, routeEmbeddings } from "@/lib/routing";
+import { routeChat, routeEmbeddings, routeEvaluations } from "@/lib/routing";
 import { chatRequestSchema } from "@/lib/schemas/chat";
 import { embeddingsRequestSchema } from "@/lib/schemas/embeddings";
+import { evaluationsRequestSchema } from "@/lib/schemas/evaluations";
 
 function unauthorized(requestId: string): Response {
   return errorResponse(new ApiError(401, "authentication_error", "invalid_api_key", "Invalid API key"), requestId);
@@ -52,6 +53,23 @@ export async function handleEmbeddings(request: Request): Promise<Response> {
       object: "list",
       data: result.embeddings.map((embedding, index) => ({ object: "embedding", index, embedding })),
       model: "gateway",
+      ...(result.usage ? { usage: result.usage } : {}),
+    }, { headers: { "X-Request-Id": requestId } });
+  } catch (error) {
+    return errorResponse(normalizeCaught(error), requestId);
+  }
+}
+
+export async function handleEvaluations(request: Request): Promise<Response> {
+  const requestId = `req_${randomUUID()}`;
+  if (!isAuthorized(request)) return unauthorized(requestId);
+  try {
+    const parsed = evaluationsRequestSchema.safeParse(await readJsonBody(request));
+    if (!parsed.success) throw new ApiError(400, "invalid_request_error", "invalid_request", "Invalid evaluation request");
+    const result = await routeEvaluations(parsed.data, requestId);
+    return Response.json({
+      model: "gateway",
+      answers: result.answers,
       ...(result.usage ? { usage: result.usage } : {}),
     }, { headers: { "X-Request-Id": requestId } });
   } catch (error) {

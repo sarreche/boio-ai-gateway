@@ -1,12 +1,14 @@
 import type { ChatRequest } from "@/lib/schemas/chat";
 import type { EmbeddingsRequest } from "@/lib/schemas/embeddings";
+import type { EvaluationsRequest } from "@/lib/schemas/evaluations";
 import { getEnabledProviders, getProviderTimeout, type ProviderConfig } from "@/lib/config";
 import { GeminiProvider } from "@/lib/providers/gemini";
 import { OpenAICompatibleProvider } from "@/lib/providers/openai-compatible";
-import { ProviderFailure, type ChatProvider, type ChatResult, type EmbeddingProvider, type EmbeddingResult } from "@/lib/providers/types";
+import { VercelEvaluationProvider } from "@/lib/providers/vercel-evaluation";
+import { ProviderFailure, type ChatProvider, type ChatResult, type EmbeddingProvider, type EmbeddingResult, type EvaluationProvider, type EvaluationResult } from "@/lib/providers/types";
 import { logProviderAttempt } from "@/lib/logger";
 
-type Endpoint = "chat" | "embeddings";
+type Endpoint = "chat" | "embeddings" | "evaluations";
 
 export async function routeChat(request: ChatRequest, requestId: string): Promise<ChatResult> {
   return route("chat", makeChatProviders(), requestId, (provider) => provider.chat(request));
@@ -14,6 +16,10 @@ export async function routeChat(request: ChatRequest, requestId: string): Promis
 
 export async function routeEmbeddings(request: EmbeddingsRequest, requestId: string): Promise<EmbeddingResult> {
   return route("embeddings", makeEmbeddingProviders(), requestId, (provider) => provider.embed(request));
+}
+
+export async function routeEvaluations(request: EvaluationsRequest, requestId: string): Promise<EvaluationResult> {
+  return route("evaluations", makeEvaluationProviders(), requestId, (provider) => provider.evaluate(request));
 }
 
 export async function route<TProvider extends { id: string }, TResult>(
@@ -50,6 +56,14 @@ function makeEmbeddingProviders(): EmbeddingProvider[] {
   return getEnabledProviders("embeddings").map((provider) => {
     if (provider.type !== "gemini") throw new ProviderFailure("configuration");
     return new GeminiProvider(provider.id, provider.apiKey, provider.model, timeout);
+  });
+}
+
+function makeEvaluationProviders(): EvaluationProvider[] {
+  const timeout = getProviderTimeout();
+  return getEnabledProviders("evaluations").map((provider) => {
+    if (provider.type !== "vercel-evaluation") throw new ProviderFailure("configuration");
+    return new VercelEvaluationProvider(provider.id, provider.baseUrl, provider.apiKey, provider.model, timeout);
   });
 }
 
