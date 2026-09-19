@@ -10,7 +10,16 @@ describe("configuration validation", () => {
     expect(() => parseConfig({
       chat: { strategy: "priority", providers: [{ id: "x", type: "openai-compatible", baseUrl: "http://example.com", apiKeyEnv: "KEY", model: "m", enabled: true, priority: 1 }] },
       embeddings: { strategy: "priority", providers: [{ id: "e", type: "gemini", apiKeyEnv: "KEY", model: "m", enabled: true, priority: 1 }] },
+      evaluations: { strategy: "priority", providers: [{ id: "v", type: "vercel-evaluation", baseUrl: "https://example.com/v1", apiKeyEnv: "KEY", model: "m", enabled: true, priority: 1 }] },
     })).toThrow();
+  });
+
+  it("accepts a Vercel evaluation provider over HTTPS", () => {
+    expect(parseConfig({
+      chat: { strategy: "priority", providers: [{ id: "x", type: "openai-compatible", baseUrl: "https://example.com", apiKeyEnv: "KEY", model: "m", enabled: true, priority: 1 }] },
+      embeddings: { strategy: "priority", providers: [{ id: "e", type: "gemini", apiKeyEnv: "KEY", model: "m", enabled: true, priority: 1 }] },
+      evaluations: { strategy: "priority", providers: [{ id: "v", type: "vercel-evaluation", baseUrl: "https://ai-gateway.vercel.sh/v1", apiKeyEnv: "VERCEL_GATEWAY_API_KEY", model: "typesafe-ai/jev", enabled: true, priority: 1 }] },
+    }).evaluations.providers[0]).toMatchObject({ id: "v", type: "vercel-evaluation" });
   });
 
   it("validates timeout configuration", () => {

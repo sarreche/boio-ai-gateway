@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { handleChat, handleEmbeddings } from "@/lib/handlers";
+import { handleChat, handleEmbeddings, handleEvaluations } from "@/lib/handlers";
 
 const originalEnv = { ...process.env };
 
@@ -16,6 +16,7 @@ beforeEach(() => {
   process.env.GROQ_API_KEY = "groq-secret";
   process.env.OPENROUTER_API_KEY = "openrouter-secret";
   process.env.GEMINI_API_KEY = "gemini-secret";
+  process.env.VERCEL_GATEWAY_API_KEY = "vercel-secret";
   vi.spyOn(console, "info").mockImplementation(() => undefined);
 });
 
@@ -82,6 +83,65 @@ describe("embeddings", () => {
     expect(response.status).toBe(200);
     expect(body.model).toBe("gateway");
     expect(body.data.map((entry: { index: number; embedding: number[] }) => [entry.index, entry.embedding])).toEqual(vectors.map((vector, index) => [index, vector]));
+  });
+});
+
+describe("evaluations", () => {
+  it("requires gateway authentication", async () => {
+    const response = await handleEvaluations(request("/v1/evaluations", {
+      state: "A refund was issued.",
+      questions: { refunded: { type: "boolean", instructions: "Was a refund issued?" } },
+    }));
+    expect(response.status).toBe(401);
+    expect(response.headers.get("x-request-id")).toMatch(/^req_/);
+  });
+
+  it.each([
+    { state: "", questions: { valid: { type: "boolean", instructions: "Valid?" } } },
+    { state: "some state", questions: {} },
+    { state: "some state", questions: { invalid: { type: "choice", instructions: "Pick", criteria: { only: "one option" } } } },
+    { state: "some state", questions: { invalid: { type: "score", instructions: "Rate", criteria: ["only one"] } } },
+    { model: "typesafe-ai/jev", state: "some state", questions: { valid: { type: "boolean", instructions: "Valid?" } } },
+  ])("rejects an invalid evaluation request", async (body) => {
+    const response = await handleEvaluations(request("/v1/evaluations", body, "valid-key"));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request" } });
+  });
+
+  it("returns mixed Jev primitives without exposing provider internals", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
+      model: "typesafe-ai/jev",
+      answers: {
+        refunded: { type: "boolean", probability: 0.98 },
+        route: { type: "choice", choice: "billing", probabilities: { billing: 0.9, support: 0.1 } },
+        urgency: { type: "score", score: 1.8, probabilities: { "0": 0.01, "1": 0.18, "2": 0.81 } },
+      },
+      usage: { inputTokens: 30, outputTokens: 7 },
+      providerMetadata: { gateway: { generationId: "gen_private", cost: "0" } },
+    })));
+    const response = await handleEvaluations(request("/v1/evaluations", {
+      model: "gateway",
+      state: { message: "I was charged twice and need a refund today." },
+      questions: {
+        refunded: { type: "boolean", instructions: "Is a refund requested?" },
+        route: { type: "choice", instructions: "Route the request.", criteria: { billing: "Payment issues", support: "Other help" } },
+        urgency: { type: "score", instructions: "Rate urgency.", criteria: ["low", "medium", "high"] },
+      },
+    }, "valid-key"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-request-id")).toMatch(/^req_/);
+    expect(body).toMatchObject({
+      model: "gateway",
+      answers: {
+        refunded: { type: "boolean", probability: 0.98 },
+        route: { type: "choice", choice: "billing" },
+        urgency: { type: "score", score: 1.8 },
+      },
+      usage: { input_tokens: 30, output_tokens: 7, total_tokens: 37 },
+    });
+    expect(JSON.stringify(body)).not.toContain("typesafe-ai/jev");
+    expect(JSON.stringify(body)).not.toContain("gen_private");
   });
 });
 

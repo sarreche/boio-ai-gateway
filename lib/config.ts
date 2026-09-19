@@ -15,7 +15,11 @@ const openAIProviderSchema = commonProviderSchema.extend({
 });
 
 const geminiProviderSchema = commonProviderSchema.extend({ type: z.literal("gemini") });
-export const providerConfigSchema = z.discriminatedUnion("type", [openAIProviderSchema, geminiProviderSchema]);
+const vercelEvaluationProviderSchema = commonProviderSchema.extend({
+  type: z.literal("vercel-evaluation"),
+  baseUrl: z.string().url().refine((url) => url.startsWith("https://"), "baseUrl must use HTTPS"),
+});
+export const providerConfigSchema = z.discriminatedUnion("type", [openAIProviderSchema, geminiProviderSchema, vercelEvaluationProviderSchema]);
 const capabilitySchema = z.object({
   strategy: z.literal("priority"),
   providers: z.array(providerConfigSchema).min(1),
@@ -23,8 +27,9 @@ const capabilitySchema = z.object({
 export const gatewayConfigSchema = z.object({
   chat: capabilitySchema,
   embeddings: capabilitySchema,
+  evaluations: capabilitySchema,
 }).superRefine((config, context) => {
-  for (const capability of [config.chat, config.embeddings]) {
+  for (const capability of [config.chat, config.embeddings, config.evaluations]) {
     const ids = new Set<string>();
     for (const provider of capability.providers) {
       if (ids.has(provider.id)) context.addIssue({ code: "custom", message: `Duplicate provider id: ${provider.id}` });
@@ -48,7 +53,7 @@ export function getConfig(): GatewayConfig {
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
-export function getEnabledProviders(capability: "chat" | "embeddings", env: Environment = process.env): Array<ProviderConfig & { apiKey: string }> {
+export function getEnabledProviders(capability: "chat" | "embeddings" | "evaluations", env: Environment = process.env): Array<ProviderConfig & { apiKey: string }> {
   return config[capability].providers
     .filter((provider) => provider.enabled)
     .sort((left, right) => left.priority - right.priority)

@@ -3,7 +3,7 @@ const origin = "https://boio-ai-gateway.vercel.app";
 export default function Home() {
   return (
     <main>
-      <header><span className="eyebrow">INTERNAL API</span><h1>AI Gateway</h1><p>A stable, provider-independent API for chat completions and text embeddings.</p></header>
+      <header><span className="eyebrow">INTERNAL API</span><h1>AI Gateway</h1><p>A stable, provider-independent API for chat completions, text embeddings, and typed evaluations.</p></header>
       <section>
         <h2>Authentication</h2>
         <p>Every <code>/v1/*</code> request requires <code>Authorization: Bearer YOUR_GATEWAY_KEY</code>. The health check is public.</p>
@@ -25,6 +25,14 @@ export default function Home() {
   -H "Authorization: Bearer YOUR_GATEWAY_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"gateway","input":["First text","Second text"]}'`}</code></pre>
+      </section>
+      <section>
+        <h2>Typed evaluations</h2><p><code>POST /v1/evaluations</code></p>
+        <p>Evaluate shared text or JSON state with boolean, choice, and score questions in one request.</p>
+        <pre><code>{`curl ${origin}/v1/evaluations \\
+  -H "Authorization: Bearer YOUR_GATEWAY_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"gateway","state":{"ticket":"My card was charged twice"},"questions":{"refund":{"type":"boolean","instructions":"Is a refund requested?"},"route":{"type":"choice","instructions":"Route this ticket","criteria":{"billing":"Payment issues","support":"Other help"}},"urgency":{"type":"score","instructions":"Rate urgency","criteria":["low","medium","high"]}}}'`}</code></pre>
       </section>
       <section>
         <h2>JavaScript / TypeScript</h2>

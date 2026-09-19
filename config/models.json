@@ -42,5 +42,19 @@
         "priority": 1
       }
     ]
+  },
+  "evaluations": {
+    "strategy": "priority",
+    "providers": [
+      {
+        "id": "vercel-jev",
+        "type": "vercel-evaluation",
+        "baseUrl": "https://ai-gateway.vercel.sh/v1",
+        "apiKeyEnv": "VERCEL_GATEWAY_API_KEY",
+        "model": "typesafe-ai/jev",
+        "enabled": true,
+        "priority": 1
+      }
+    ]
   }
 }
